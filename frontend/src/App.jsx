@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { WagmiConfig, createConfig, configureChains, useAccount, useContractRead, useContractWrite, useWaitForTransaction, useNetwork } from 'wagmi'
 import { mainnet, sepolia } from 'wagmi/chains'
+import { alchemyProvider } from 'wagmi/providers/alchemy'
 import { publicProvider } from 'wagmi/providers/public'
 import { getDefaultWallets, RainbowKitProvider, ConnectButton } from '@rainbow-me/rainbowkit'
 import '@rainbow-me/rainbowkit/styles.css'
@@ -8,7 +9,10 @@ import { CONTRACT_ADDRESS, CONTRACT_ABI } from './config'
 
 const { chains, publicClient } = configureChains(
   [mainnet, sepolia],
-  [publicProvider()]
+  [
+    alchemyProvider({ apiKey: import.meta.env.VITE_ALCHEMY_API_KEY }),
+    publicProvider()
+  ]
 )
 
 const { connectors } = getDefaultWallets({
@@ -63,8 +67,6 @@ function NFTComponent() {
       console.log('Mint transaction confirmed:', data)
       setDebugInfo(`Transaction confirmed: ${data.transactionHash}`)
       // After successful mint, we need to get the token ID
-      // For now, we'll use a simple counter approach
-      // In a production app, you'd want to listen to the NFTMinted event
       if (tokenId === null) {
         setTokenId(0) // First token
       } else {
