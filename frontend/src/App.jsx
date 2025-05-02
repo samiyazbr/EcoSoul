@@ -40,8 +40,8 @@ function NFTComponent() {
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'getNFTState',
-    args: tokenId ? [tokenId] : undefined,
-    enabled: !!tokenId,
+    args: tokenId !== null ? [tokenId] : undefined,
+    enabled: tokenId !== null && isConnected,
   })
 
   // Contract write function to mint NFT
@@ -53,6 +53,11 @@ function NFTComponent() {
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'mint',
+    onSuccess: (data) => {
+      console.log('Mint transaction sent:', data)
+      setDebugInfo(`Mint transaction sent: ${data.hash}`)
+      setTokenId(0) // Set initial token ID
+    },
     onError: (error) => {
       console.error('Minting error:', error)
       setError(error.message)
@@ -66,14 +71,10 @@ function NFTComponent() {
     onSuccess: (data) => {
       console.log('Mint transaction confirmed:', data)
       setDebugInfo(`Transaction confirmed: ${data.transactionHash}`)
-      // After successful mint, we need to get the token ID
-      if (tokenId === null) {
-        setTokenId(0) // First token
-      } else {
-        setTokenId(tokenId + 1) // Next token
-      }
-      // Refetch NFT state
-      refetchNFTState()
+      // Refetch NFT state after confirmation
+      setTimeout(() => {
+        refetchNFTState()
+      }, 2000)
     },
     onError: (error) => {
       console.error('Transaction error:', error)
@@ -94,6 +95,15 @@ function NFTComponent() {
       setDebugInfo(`NFT state updated: Score ${nftData.ecoScore}, Weather ${nftData.weatherCondition}`)
     }
   }, [nftData])
+
+  // Add a new effect to handle token ID changes
+  useEffect(() => {
+    if (tokenId !== null) {
+      console.log('Token ID updated:', tokenId)
+      setDebugInfo(`Token ID set to: ${tokenId}`)
+      refetchNFTState()
+    }
+  }, [tokenId])
 
   // Check network
   useEffect(() => {
