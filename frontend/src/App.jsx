@@ -30,11 +30,16 @@ const config = createConfig({
 function NFTComponent() {
   const { address, isConnected } = useAccount()
   const { chain } = useNetwork()
-  const [tokenId, setTokenId] = useState(null)
+  const [tokenIds, setTokenIds] = useState([])
+  const [currentTokenId, setCurrentTokenId] = useState(null)
   const [nftState, setNftState] = useState(null)
+  const [totalEcoScore, setTotalEcoScore] = useState(0)
   const [error, setError] = useState(null)
   const [debugInfo, setDebugInfo] = useState('')
   const [selectedActivity, setSelectedActivity] = useState('biking')
+  const [showActivityForm, setShowActivityForm] = useState(false)
+  const [previousActivity, setPreviousActivity] = useState('No activity yet')
+  const [currentActivity, setCurrentActivity] = useState('No activity yet')
 
   const activities = [
     { id: 'biking', label: 'Biking (5km)', multiplier: '100%' },
@@ -49,8 +54,8 @@ function NFTComponent() {
     address: CONTRACT_ADDRESS,
     abi: CONTRACT_ABI,
     functionName: 'getNFTState',
-    args: tokenId !== null ? [tokenId] : undefined,
-    enabled: tokenId !== null && isConnected,
+    args: currentTokenId !== null ? [currentTokenId] : undefined,
+    enabled: currentTokenId !== null && isConnected,
   })
 
   // Contract write function to mint NFT
@@ -65,7 +70,6 @@ function NFTComponent() {
     onSuccess: (data) => {
       console.log('Mint transaction sent:', data)
       setDebugInfo(`Mint transaction sent: ${data.hash}`)
-      setTokenId(0) // Set initial token ID
     },
     onError: (error) => {
       console.error('Minting error:', error)
@@ -80,6 +84,10 @@ function NFTComponent() {
     onSuccess: (data) => {
       console.log('Mint transaction confirmed:', data)
       setDebugInfo(`Transaction confirmed: ${data.transactionHash}`)
+      // Get the new token ID from the event logs
+      const newTokenId = tokenIds.length
+      setTokenIds(prev => [...prev, newTokenId])
+      setCurrentTokenId(newTokenId)
       // Refetch NFT state after confirmation
       setTimeout(() => {
         refetchNFTState()
@@ -96,23 +104,28 @@ function NFTComponent() {
   useEffect(() => {
     if (nftData) {
       console.log('NFT Data received:', nftData)
+      const newEcoScore = parseInt(nftData.ecoScore.toString())
+      
       setNftState({
-        ecoScore: nftData.ecoScore.toString(),
+        ecoScore: newEcoScore.toString(),
         weatherCondition: nftData.weatherCondition,
         lastUpdate: nftData.lastUpdate.toString(),
+        lastActivity: nftData.lastActivity
       })
+      // Add the new eco score to the total
+      setTotalEcoScore(prev => prev + newEcoScore)
       setDebugInfo(`NFT state updated: Score ${nftData.ecoScore}, Weather ${nftData.weatherCondition}`)
     }
   }, [nftData])
 
   // Add a new effect to handle token ID changes
   useEffect(() => {
-    if (tokenId !== null) {
-      console.log('Token ID updated:', tokenId)
-      setDebugInfo(`Token ID set to: ${tokenId}`)
+    if (currentTokenId !== null) {
+      console.log('Token ID updated:', currentTokenId)
+      setDebugInfo(`Token ID set to: ${currentTokenId}`)
       refetchNFTState()
     }
-  }, [tokenId])
+  }, [currentTokenId])
 
   // Check network
   useEffect(() => {
@@ -140,6 +153,11 @@ function NFTComponent() {
     try {
       setError(null)
       setDebugInfo('Initiating mint transaction...')
+      // Update previous activity before minting new one
+      if (currentActivity !== 'No activity yet') {
+        setPreviousActivity(currentActivity)
+      }
+      setCurrentActivity(selectedActivity)
       // Mint new NFT with selected activity
       await mintNFT({
         args: [selectedActivity]
@@ -150,6 +168,35 @@ function NFTComponent() {
       setDebugInfo(`Error: ${error.message}`)
     }
   }
+
+  const renderActivityForm = () => (
+    <div className="mb-4">
+      <label htmlFor="activity" className="block text-sm font-medium text-gray-700 mb-2">
+        Select your eco-friendly activity:
+      </label>
+      <select
+        id="activity"
+        value={selectedActivity}
+        onChange={(e) => setSelectedActivity(e.target.value)}
+        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+      >
+        {activities.map((activity) => (
+          <option key={activity.id} value={activity.id}>
+            {activity.label} (Score: {activity.multiplier})
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={handleEcoAction}
+        disabled={isMinting || isConfirming}
+        className={`mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors ${
+          (isMinting || isConfirming) ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
+      >
+        {isMinting ? 'Minting...' : isConfirming ? 'Confirming...' : 'Record Activity'}
+      </button>
+    </div>
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-green-100">
@@ -185,53 +232,36 @@ function NFTComponent() {
                   {nftState.weatherCondition === 'sunny' ? '🌻' : 
                    nftState.weatherCondition === 'rainy' ? '🌧️' : '🌱'}
                 </div>
-                <p className="text-gray-600">Eco Score: {nftState.ecoScore}</p>
-                <p className="text-gray-500 text-sm mt-2">
-                  Last Activity: {nftState.lastActivity}
-                </p>
-                <p className="text-gray-500 text-sm mt-2">
-                  Last updated: {new Date(parseInt(nftState.lastUpdate) * 1000).toLocaleString()}
-                </p>
-                {tokenId !== null && (
-                  <p className="text-gray-500 text-sm mt-2">
-                    Token ID: {tokenId}
+                <div className="mb-4">
+                  <p className="text-gray-600">Current Activity: {currentActivity}</p>
+                  <p className="text-gray-600">Previous Activity: {previousActivity}</p>
+                  <p className="text-gray-600">Current Eco Score: {nftState.ecoScore}</p>
+                  <p className="text-xl font-semibold text-green-600 mt-2">
+                    Total Eco Score: {totalEcoScore}
                   </p>
+                </div>
+                <div className="text-sm text-gray-500 space-y-1">
+                  <p>Last updated: {new Date(parseInt(nftState.lastUpdate) * 1000).toLocaleString()}</p>
+                  {currentTokenId !== null && (
+                    <p>Token ID: {currentTokenId}</p>
+                  )}
+                </div>
+                
+                {showActivityForm ? (
+                  renderActivityForm()
+                ) : (
+                  <button
+                    onClick={() => setShowActivityForm(true)}
+                    className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Record New Activity
+                  </button>
                 )}
               </div>
             ) : (
               <div className="text-center">
                 <p className="text-gray-600 mb-4">No NFT minted yet</p>
-                <div className="mb-4">
-                  <label htmlFor="activity" className="block text-sm font-medium text-gray-700 mb-2">
-                    Select your eco-friendly activity:
-                  </label>
-                  <select
-                    id="activity"
-                    value={selectedActivity}
-                    onChange={(e) => setSelectedActivity(e.target.value)}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
-                  >
-                    {activities.map((activity) => (
-                      <option key={activity.id} value={activity.id}>
-                        {activity.label} (Score: {activity.multiplier})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleEcoAction}
-                  disabled={isMinting || isConfirming}
-                  className={`bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-colors ${
-                    (isMinting || isConfirming) ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isMinting ? 'Minting...' : isConfirming ? 'Confirming...' : 'Record Activity'}
-                </button>
-                {mintData?.hash && (
-                  <p className="text-sm text-gray-500 mt-2">
-                    Transaction: {mintData.hash}
-                  </p>
-                )}
+                {renderActivityForm()}
               </div>
             )}
           </div>
