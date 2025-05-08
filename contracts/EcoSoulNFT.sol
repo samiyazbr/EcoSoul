@@ -16,10 +16,9 @@ contract EcoSoulNFT is ERC721, Ownable {
     string private _baseTokenURI;
 
     // Constants for eco score calculation
-    uint256 private constant BASE_DISTANCE = 5; // 5km
     uint256 private constant BASE_SCORE = 100; // Base score for 5km
     uint256 private constant SUNNY_MULTIPLIER = 120; // 20% bonus for sunny weather
-    uint256 private constant RAINY_MULTIPLIER = 150; // 50% bonus for rainy weather (more challenging)
+    uint256 private constant RAINY_MULTIPLIER = 150; // 50% bonus for rainy weather
 
     event NFTMinted(address indexed owner, uint256 indexed tokenId);
     event NFTUpdated(uint256 indexed tokenId, string weatherCondition, uint256 ecoScore);
@@ -50,10 +49,11 @@ contract EcoSoulNFT is ERC721, Ownable {
         // Base score for 5km biking
         uint256 score = BASE_SCORE;
         
-        // Apply weather multipliers
-        if (keccak256(bytes(weatherCondition)) == keccak256(bytes("sunny"))) {
+        // Apply weather multipliers using bytes32 comparison for gas optimization
+        bytes32 weatherHash = keccak256(bytes(weatherCondition));
+        if (weatherHash == keccak256(bytes("sunny"))) {
             score = (score * SUNNY_MULTIPLIER) / 100;
-        } else if (keccak256(bytes(weatherCondition)) == keccak256(bytes("rainy"))) {
+        } else if (weatherHash == keccak256(bytes("rainy"))) {
             score = (score * RAINY_MULTIPLIER) / 100;
         }
         
