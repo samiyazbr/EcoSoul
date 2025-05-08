@@ -1,4 +1,4 @@
-export const CONTRACT_ADDRESS = "0xfA4d9073e293D1a42cB93D2629D44ddC91f8ae95"
+export const CONTRACT_ADDRESS = "0x25f163C5B32c053e3e6Cc39c95Cf2a8A305E96E4"
 
 export const CONTRACT_ABI = [
   {
@@ -45,6 +45,12 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "ecoScore",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "string",
+        "name": "activity",
+        "type": "string"
       }
     ],
     "name": "NFTUpdated",
@@ -76,6 +82,11 @@ export const CONTRACT_ABI = [
             "internalType": "uint256",
             "name": "lastUpdate",
             "type": "uint256"
+          },
+          {
+            "internalType": "string",
+            "name": "lastActivity",
+            "type": "string"
           }
         ],
         "internalType": "struct EcoSoulNFT.NFTState",
@@ -87,7 +98,13 @@ export const CONTRACT_ABI = [
     "type": "function"
   },
   {
-    "inputs": [],
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "activity",
+        "type": "string"
+      }
+    ],
     "name": "mint",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -109,6 +126,11 @@ export const CONTRACT_ABI = [
         "internalType": "uint256",
         "name": "ecoScore",
         "type": "uint256"
+      },
+      {
+        "internalType": "string",
+        "name": "activity",
+        "type": "string"
       }
     ],
     "name": "updateNFTState",

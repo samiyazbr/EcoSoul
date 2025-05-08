@@ -34,6 +34,15 @@ function NFTComponent() {
   const [nftState, setNftState] = useState(null)
   const [error, setError] = useState(null)
   const [debugInfo, setDebugInfo] = useState('')
+  const [selectedActivity, setSelectedActivity] = useState('biking')
+
+  const activities = [
+    { id: 'biking', label: 'Biking (5km)', multiplier: '100%' },
+    { id: 'walking', label: 'Walking (5km)', multiplier: '80%' },
+    { id: 'public_transport', label: 'Public Transport', multiplier: '90%' },
+    { id: 'recycling', label: 'Recycling', multiplier: '70%' },
+    { id: 'planting', label: 'Planting Trees', multiplier: '150%' }
+  ]
 
   // Contract read function to get NFT state
   const { data: nftData, refetch: refetchNFTState } = useContractRead({
@@ -131,8 +140,10 @@ function NFTComponent() {
     try {
       setError(null)
       setDebugInfo('Initiating mint transaction...')
-      // Mint new NFT
-      await mintNFT()
+      // Mint new NFT with selected activity
+      await mintNFT({
+        args: [selectedActivity]
+      })
     } catch (error) {
       console.error('Error minting NFT:', error)
       setError(error.message)
@@ -176,6 +187,9 @@ function NFTComponent() {
                 </div>
                 <p className="text-gray-600">Eco Score: {nftState.ecoScore}</p>
                 <p className="text-gray-500 text-sm mt-2">
+                  Last Activity: {nftState.lastActivity}
+                </p>
+                <p className="text-gray-500 text-sm mt-2">
                   Last updated: {new Date(parseInt(nftState.lastUpdate) * 1000).toLocaleString()}
                 </p>
                 {tokenId !== null && (
@@ -187,6 +201,23 @@ function NFTComponent() {
             ) : (
               <div className="text-center">
                 <p className="text-gray-600 mb-4">No NFT minted yet</p>
+                <div className="mb-4">
+                  <label htmlFor="activity" className="block text-sm font-medium text-gray-700 mb-2">
+                    Select your eco-friendly activity:
+                  </label>
+                  <select
+                    id="activity"
+                    value={selectedActivity}
+                    onChange={(e) => setSelectedActivity(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md"
+                  >
+                    {activities.map((activity) => (
+                      <option key={activity.id} value={activity.id}>
+                        {activity.label} (Score: {activity.multiplier})
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   onClick={handleEcoAction}
                   disabled={isMinting || isConfirming}
@@ -194,7 +225,7 @@ function NFTComponent() {
                     (isMinting || isConfirming) ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  {isMinting ? 'Minting...' : isConfirming ? 'Confirming...' : 'I biked 5km'}
+                  {isMinting ? 'Minting...' : isConfirming ? 'Confirming...' : 'Record Activity'}
                 </button>
                 {mintData?.hash && (
                   <p className="text-sm text-gray-500 mt-2">
